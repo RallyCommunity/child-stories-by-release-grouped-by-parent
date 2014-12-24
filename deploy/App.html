@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stories By Release Grouped by Parent</title>
+
+    <script type="text/javascript" src="/apps/2.0rc3/sdk.js"></script>
+
+    <script type="text/javascript">
+        Rally.onReady(function () {
+                Ext.define("CustomApp",{extend:"Rally.app.TimeboxScopedApp",componentCls:"app",scopeType:"release",comboboxConfig:{fieldLabel:"Select a Release:",labelWidth:100,width:300},onScopeChange:function(){this._makeStore()},_makeStore:function(){var filter=Ext.create("Rally.data.wsapi.Filter",{property:"Parent",operator:"!=",value:null});filter=filter.and(this.getContext().getTimeboxScope().getQueryFilter()),Ext.create("Rally.data.wsapi.Store",{model:"UserStory",fetch:["ObjectID","FormattedID","Name","ScheduleState","Parent","PlanEstimate"],autoLoad:!0,filters:[filter],listeners:{load:this._onDataLoaded,scope:this}})},_onDataLoaded:function(store,records){if(0===records.length)this._notifyNoStories();else{this._notifier&&this._notifier.destroy();var that=this,promises=[];_.each(records,function(story){promises.push(that._getParent(story,that))}),Deft.Promise.all(promises).then({success:function(results){that._stories=results,that._makeGrid()}})}},_getParent:function(story,scope){var deferred=Ext.create("Deft.Deferred"),that=scope,parentOid=story.get("Parent").ObjectID;return Rally.data.ModelFactory.getModel({type:"UserStory",scope:this,success:function(model,operation){model.load(parentOid,{scope:this,success:function(record,operation){var parentFid=record.get("FormattedID"),storyRef=story.get("_ref"),storyOid=story.get("ObjectID"),storyFid=story.get("FormattedID"),storyName=story.get("Name"),storyPlanEstimate=story.get("PlanEstimate"),parent=story.get("Parent");result={_ref:storyRef,ObjectID:storyOid,FormattedID:storyFid,Name:storyName,PlanEstimate:storyPlanEstimate,Parent:parent,ParentID:parentFid},deferred.resolve(result)}})}}),deferred},_makeGrid:function(){var that=this;console.log(that._stories),that._grid&&that._grid.destroy();var gridStore=Ext.create("Rally.data.custom.Store",{data:that._stories,groupField:"ParentID",pageSize:1e3});that._grid=Ext.create("Rally.ui.grid.Grid",{itemId:"storyGrid",store:gridStore,features:[{ftype:"groupingsummary"}],enableBlockedReasonPopover:!1,minHeight:500,columnCfgs:[{text:"Formatted ID",dataIndex:"FormattedID",xtype:"templatecolumn",tpl:Ext.create("Rally.ui.renderer.template.FormattedIDTemplate")},{text:"Name",dataIndex:"Name"},{text:"PlanEstimate",dataIndex:"PlanEstimate",summaryType:"sum"},{text:"Parent",dataIndex:"Parent",renderer:function(val,meta,record){return'<a href="https://rally1.rallydev.com/#/detail/userstory/'+record.get("Parent").ObjectID+'" target="_blank">'+record.get("Parent").FormattedID+"</a>"}}]}),that.add(that._grid),that._grid.reconfigure(gridStore)},_notifyNoStories:function(){this._grid&&this._grid.destroy(),this._notifier&&this._notifier.destroy(),this._notifier=Ext.create("Ext.Container",{xtype:"container",itemId:"notifyContainer",html:"No Stories found matching selection."}),this.add(this._notifier)}});
+
+            Rally.launchApp('CustomApp', {
+                name:"Stories By Release Grouped by Parent",
+	            parentRepos:""
+            });
+
+        });
+    </script>
+
+
+    <style type="text/css">
+        
+    </style>
+</head>
+<body>
+</body>
+</html>
